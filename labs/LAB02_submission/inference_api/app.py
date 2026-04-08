@@ -207,16 +207,62 @@ async def predict(
 
 
 # ============================================================================
-# TODO: Add /health and /stats endpoints (Part 4)
+# Monitoring Endpoints (Part 4)
 # ============================================================================
-# Your code here!
-# 
-# /health should return: {"status": "healthy", "model_loaded": true}
-#
-# /stats should read from the log file and return statistics like:
-# - Total items processed
-# - Breakdown by classification
-# - Average confidence score
+
+@app.get("/health")
+def health():
+    """
+    Health check endpoint for load balancers and orchestration systems.
+    Returns service status and whether the ML model is loaded.
+    """
+    return {
+        "status": "healthy",
+        "model_loaded": model is not None
+    }
+
+
+@app.get("/stats")
+def stats():
+    """
+    Processing statistics endpoint.
+    Reads the classification log and returns aggregate metrics.
+    """
+    if not LOG_PATH.exists():
+        return {
+            "total_processed": 0,
+            "category_breakdown": {},
+            "average_confidence": None
+        }
+
+    entries = []
+    with open(LOG_PATH, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                entries.append(json.loads(line))
+
+    if not entries:
+        return {
+            "total_processed": 0,
+            "category_breakdown": {},
+            "average_confidence": None
+        }
+
+    category_breakdown = {}
+    for entry in entries:
+        label = entry.get("top_prediction", "unknown")
+        category_breakdown[label] = category_breakdown.get(label, 0) + 1
+
+    avg_confidence = round(
+        sum(e.get("confidence", 0) for e in entries) / len(entries), 2
+    )
+
+    return {
+        "total_processed": len(entries),
+        "category_breakdown": category_breakdown,
+        "average_confidence": avg_confidence
+    }
 
 
 if __name__ == "__main__":

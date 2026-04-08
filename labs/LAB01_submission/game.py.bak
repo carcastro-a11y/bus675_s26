@@ -1,0 +1,84 @@
+"""
+Zombie Survival Text Adventure RPG
+A text-based adventure game with turn-based combat, inventory management,
+and exploration in a zombie-infested city.
+
+Run with: python game.py
+"""
+
+import random
+
+
+# ============================================================================
+# DICE ROLLING FUNCTIONS
+# ============================================================================
+
+def roll_d20():
+    """Roll a 20-sided die."""
+    return random.randint(1, 20)
+
+
+def roll_dice(num_dice, sides):
+    """Roll multiple dice and return the total. E.g., roll_dice(2, 6) for 2d6."""
+    return sum(random.randint(1, sides) for _ in range(num_dice))
+
+
+# ============================================================================
+# CHARACTER SYSTEM
+# ============================================================================
+
+class Character:
+    """Base class for all characters in the game."""
+    
+    def __init__(self, name, health, strength, defense):
+        self.name = name
+        self.max_health = health
+        self.health = health
+        self.strength = strength
+        self.defense = defense
+        self.infection_level = 0  # 0-100 scale, where 100 is fully infected
+    
+    def is_alive(self):
+        """Return True if the character is still alive."""
+        return self.health > 0
+    
+    def take_damage(self, amount):
+        """Reduce health by damage amount, but don't go below 0."""
+        self.health = max(0, self.health - amount)
+        print(f"{self.name} takes {amount} damage! (HP: {self.health}/{self.max_health})")
+        
+        if self.infection_level > 0:
+            status = "🦠" if self.infection_level >= 50 else "⚠️"
+            print(f"{status} Infection level: {self.infection_level}%")
+        
+        if not self.is_alive():
+            print(f"{self.name} has fallen!")
+    
+    def apply_infection(self, amount):
+        """Apply infection damage. At 100%, character is incapacitated."""
+        self.infection_level = min(100, self.infection_level + amount)
+        if amount > 0:
+            print(f"🦠 {self.name} becomes infected! (Infection: {self.infection_level}%)")
+        if self.infection_level >= 100:
+            print(f"💀 {self.name} has succumbed to infection!")
+            self.health = 0
+    
+    def attack(self, target):
+        """Perform a D20 attack against a target."""
+        print(f"\n{self.name} attacks {target.name}!")
+        
+        attack_roll = roll_d20()
+        total_attack = attack_roll + self.strength
+        
+        print(f"Roll: {attack_roll} + STR({self.strength}) = {total_attack}")
+        print(f"{target.name}'s Defense: {target.defense}")
+        
+        if total_attack > target.defense:
+            print("Hit!")
+            damage = self.strength
+            target.take_damage(damage)
+        else:
+            print("Miss!")
+    
+    def __str__(self):
+        return f"{self.name} (HP: {self.health}/{self.max_health}, STR: {self.strength}, DEF: {self.defense})"
